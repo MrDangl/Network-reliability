@@ -552,13 +552,15 @@ enum filetype { TYPE_EDGES };
 
 int Graph::loadEdgeDataFromGraphML(std::string filename, double graphprobabiledge)
 {
+	cleanup();
+	latestEstimatedReliability = -1;
+
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load_file(filename.c_str());
 	pugi::xml_node graph = doc.child("graphml").child("graph");
 	if (result)
 	{
 		std::vector<std::string> nodes = std::vector<std::string>();
-		cleanup();
 		auto c = graph.first_child();
 		for (pugi::xml_node elem : graph)
 		{
@@ -576,13 +578,16 @@ int Graph::loadEdgeDataFromGraphML(std::string filename, double graphprobabiledg
 				std::vector<std::string>::iterator targetit = std::find(nodes.begin(), nodes.end(), elem.attribute("target").as_string());
 				
 				int n1 = std::distance(nodes.begin(), sourcit)-1;
-				std::cout << " source it " << n1;
+				//std::cout << " source it " << n1;
+
 				int n2 = std::distance(nodes.begin(), targetit)-1;
-				std::cout << "target it " << n2<< "\n";
+				//std::cout << "target it " << n2<< "\n";
 				Edge* e = new Edge(n1, n2, graphprobabiledge);
+				edges.push_back(e);
 				if (elem.attribute("directed"))
 				{
 					Edge* e = new Edge(n2, n1, graphprobabiledge);
+					edges.push_back(e);
 				}
 			}
 		}
@@ -602,14 +607,14 @@ int Graph::loadEdgeDataFromGraphML(std::string filename, double graphprobabiledg
 			connectingEdges[n[1]].push_back(*it);
 		}
 
-		for (int i=0; i<=biggestNodeId; ++i)
-		{
-			std::cout << "node "<<i<<" has the following edges\n";
-			for (it = connectingEdges[i].begin(); it < connectingEdges[i].end() ; ++it )
-			{
-				std::cout << (*it)->getNodes()[0] << " " << (*it)->getNodes()[1] << std::endl;
-			}
-		}
+		//for (int i=0; i<=biggestNodeId; ++i)
+		//{
+		//	std::cout << "node "<<i<<" has the following edges\n";
+		//	for (it = connectingEdges[i].begin(); it < connectingEdges[i].end() ; ++it )
+		//	{
+		//		std::cout << (*it)->getNodes()[0] << " " << (*it)->getNodes()[1] << std::endl;
+		//	}
+		//}
 		return NO_ERROR;
 	}
 	else

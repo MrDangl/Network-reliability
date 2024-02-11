@@ -23,26 +23,29 @@ int main(int argv, char **argc)
 
 	double probabil;
 	std::string pathml;
+	int maxCost;
+	int Nmax;
+	int nbrAnts;
 
 	Command_line args;
 
 	args.add_argument({ "-pathMl" }, &pathml, "Path to GrapthMl.");
 	args.add_argument({ "-probability" }, &probabil, "Probability of edge reliability");
+	args.add_argument({ "-maxCost" }, &maxCost, "Maximum cost for ants to operate");
+	args.add_argument({ "-Nmax" }, &Nmax, "Maximum number of iterations");
+	args.add_argument({ "-nbrAnts" }, &probabil, "Numers of ants");
 
 	args.print_help();
-	
+	//
 	//pathml = "test.graphml";
-	//probabil = 0.99;
+	//probabil = 0.8;
+	//maxCost = 2;
+	//Nmax = 2;
+	//nbrAnts = 2;
+
 	args.parse( argv, argc);
-
-
-	std::cout << "Error == "<< network.loadEdgeDataFromGraphML(pathml, probabil)<<"\n";
-			// Normal calculation
-			std::cout << "Starting normal calculation of " << pathml << std::endl;
-			float rel = network.estReliabilityMC( 100000, false );
-			if ( rel < 0 )
-					std::cout << "Something went wrong in the reliability estimation\n";
-			else std::cout << "Reliability = " << rel << std::endl;
+	int result = acoFindOptimal(&network, Nmax, nbrAnts, maxCost);
+	std::cout << "ACO returned "<<result<<std::endl;
 
 	//Бывшый Код, не трогать
 	// 
