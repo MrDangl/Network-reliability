@@ -31,9 +31,9 @@ int main(int argv, char **argc)
 
 	args.print_help();
 	
-	pathml = "test.graphml";
-	probabil = 0.99;
-	//args.parse( argv, argc);
+	//pathml = "test.graphml";
+	//probabil = 0.99;
+	args.parse( argv, argc);
 
 
 	std::cout << "Error == "<< network.loadEdgeDataFromGraphML(pathml, probabil)<<"\n";
