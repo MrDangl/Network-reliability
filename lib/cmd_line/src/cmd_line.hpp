@@ -4,10 +4,10 @@
 #include <iostream>
 #include <cassert>
 #include <string>
-#include <variant>
 #include <vector>
 #include <cinttypes>
 #include <sstream>
+#include <variant>
 
 // This class is a simple and effective class to parse command line arguments.
 // For each possible argument it stores a pointer to a variable. When the
@@ -37,6 +37,7 @@ public:
 	// with a std::stringstream. This std::variant can be easily extended if
 	// the stream operator>> is overloaded. If not, you have to add a special
 	// case to the parse() method.
+	
 	typedef std::variant<int*,
 						 unsigned int*,
 						 /*

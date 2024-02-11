@@ -19,7 +19,7 @@
 #include "graph.h"
 #include "MersenneTwister.h"
 #include "ants.h"
-
+#include <variant>
 ////////////////////////////////////////////////////////////
 //
 //      The edge class
@@ -39,7 +39,7 @@ Edge::Edge( int n1, int n2, float _reliability, float _cost )
 		n[0] = n2;
 		n[1] = n1;
 	}
-
+	std::variant<int> hello;
     reliability = _reliability;
     cost = _cost;
     working = true;
@@ -217,7 +217,9 @@ float Graph::estReliabilityMC( int t, bool rawFormat)
 		}
 
 		// Keep an array for all visited nodes.
-		bool nodeVisited[biggestNodeId+1];
+
+		std::vector<bool> nodeVisited(biggestNodeId+1);
+		
 		for ( int i=0; i<=biggestNodeId; ++i )
 		{
 			nodeVisited[i] = false;
@@ -231,7 +233,7 @@ float Graph::estReliabilityMC( int t, bool rawFormat)
 		}*/
 
 		// Is this a working two-terminal instance of the problem?
-		int result = unfoldGraph( 0, connectingEdges,nodeVisited );
+		int result = unfoldGraph( 0, connectingEdges,&nodeVisited );
 
 		// Is it a working all-terminal instance? (Are all nodes visited?)
 		int allterminal=1;
@@ -256,10 +258,10 @@ float Graph::estReliabilityMC( int t, bool rawFormat)
 	return latestEstimatedReliability;
 }
 
-bool Graph::unfoldGraph( int nc,  std::vector<Edge*> *connectingEdges, bool *visitedNodes )
+bool Graph::unfoldGraph( int nc,  std::vector<Edge*> *connectingEdges, std::vector<bool>* visitedNodes )
 {
 	//std::cout << "Iterating over edges connected to " << nc << std::endl;
-	visitedNodes[nc] = true;
+	visitedNodes->at(nc)=true;
 
 	std::vector<Edge*>::iterator it;
 	for ( it = connectingEdges[nc].begin(); it < connectingEdges[nc].end() ; ++it )
@@ -270,7 +272,7 @@ bool Graph::unfoldGraph( int nc,  std::vector<Edge*> *connectingEdges, bool *vis
 			int newNode = (*it)->getConnectingNode(nc);
 
 			// Are these nodes visited earlier?
-			if ( visitedNodes[newNode] == false)
+			if ( visitedNodes->at(newNode) == false)
 			{
 				// Expand this new node
 				bool result = unfoldGraph( newNode, connectingEdges, visitedNodes );
@@ -403,7 +405,7 @@ int acoFindOptimal( Graph *nw, int Nmax, int nbrAnts, int maxLinksInSolution )
 			// Keep adding links to this ant until enough have been chosen.
 			// Pick one link at random, roll the dice and compare with pheromones
 			int nbrAddedLinks=0;
-			int addedLinks[edges.size()];
+			std::vector<int> addedLinks(edges.size());
 			for (int i=0;i<edges.size();++i)
 				addedLinks[i]=0;
 
@@ -470,7 +472,7 @@ int acoFindOptimal( Graph *nw, int Nmax, int nbrAnts, int maxLinksInSolution )
 		// This means, iterate over ant. which says if link i is working or not
 		std::vector<Edge*> *allEdges = nw->getEdges();
 		int maxLinks = allEdges->size();
-		float deltaTau[maxLinks][Edge::maxLevels];
+		std::vector<std::vector<float>> deltaTau(maxLinks,std::vector<float>(Edge::maxLevels));
 		for (int i=0;i<maxLinks; ++i)
 			for ( int level=0; level<Edge::maxLevels; ++level )
 				deltaTau[i][level] = 0;
@@ -547,6 +549,72 @@ int acoFindOptimal( Graph *nw, int Nmax, int nbrAnts, int maxLinksInSolution )
 }
 
 enum filetype { TYPE_EDGES };
+
+int Graph::loadEdgeDataFromGraphML(std::string filename, double graphprobabiledge)
+{
+	pugi::xml_document doc;
+	pugi::xml_parse_result result = doc.load_file(filename.c_str());
+	pugi::xml_node graph = doc.child("graphml").child("graph");
+	if (result)
+	{
+		std::vector<std::string> nodes = std::vector<std::string>();
+		cleanup();
+		auto c = graph.first_child();
+		for (pugi::xml_node elem : graph)
+		{
+			std::string str = elem.name();
+			if (str == "node")
+			{
+				nodes.push_back(elem.attribute("id").as_string());
+				if (nodes.size() > biggestNodeId) biggestNodeId = nodes.size() - 1;
+			}
+			if (str == "edge")
+			{
+				
+
+				std::vector<std::string>::iterator sourcit = std::find(nodes.begin(), nodes.end(), elem.attribute("source").as_string());
+				std::vector<std::string>::iterator targetit = std::find(nodes.begin(), nodes.end(), elem.attribute("target").as_string());
+				
+				int n1 = std::distance(nodes.begin(), sourcit)-1;
+				std::cout << " source it " << n1;
+				int n2 = std::distance(nodes.begin(), targetit)-1;
+				std::cout << "target it " << n2<< "\n";
+				Edge* e = new Edge(n1, n2, graphprobabiledge);
+				if (elem.attribute("directed"))
+				{
+					Edge* e = new Edge(n2, n1, graphprobabiledge);
+				}
+			}
+		}
+
+		// Given a node, we want to quickly find what edges are connecting to this node
+		// Thus we keep an array of vectors, where each element in the array corresponds
+		// to a node and holds a linked vector with all the connecting edges
+		connectingEdges = new std::vector<Edge*>[biggestNodeId + 1];
+
+		// Now, go through edges and put each edge in the right element in connectingEdges
+		std::vector<Edge*>::iterator it;
+		for (it = edges.begin(); it < edges.end(); ++it)
+		{
+			std::cout << (*it)->getNodes()[0] << " " << (*it)->getNodes()[1] << " " << biggestNodeId <<  std::endl;
+			const int* n = (*it)->getNodes();
+			connectingEdges[n[0]].push_back(*it); // Add a copy of *it to connectingEdges
+			connectingEdges[n[1]].push_back(*it);
+		}
+
+		for (int i=0; i<=biggestNodeId; ++i)
+		{
+			std::cout << "node "<<i<<" has the following edges\n";
+			for (it = connectingEdges[i].begin(); it < connectingEdges[i].end() ; ++it )
+			{
+				std::cout << (*it)->getNodes()[0] << " " << (*it)->getNodes()[1] << std::endl;
+			}
+		}
+		return NO_ERROR;
+	}
+	else
+		return FILE_OPEN_ERROR;
+}
 
 int Graph::loadEdgeData( const char* filename, bool quiet )
 {
@@ -719,6 +787,7 @@ void Graph::finalCleanup()
 
 Graph::Graph()
 {
+
 	if (biggestNodeId != 0)
 	{
 		// The network is already initialized

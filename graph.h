@@ -19,6 +19,8 @@
 #include <vector>
 #include <string>
 #include "MersenneTwister.h"
+#include "lib/cmd_line/src/cmd_line.hpp"
+#include "lib/pugiXML/src/pugixml.hpp"
 
 enum errors {   NO_ERROR=0,
                 DUPLICATE,
@@ -111,7 +113,7 @@ public:
 	Return NO_ERROR on success. Loading a new network removes the previous network.
 	Optional parameter makes the function quiet unless there's an error. */
     int loadEdgeData( const char* filename, bool quiet=false );
-
+	int loadEdgeDataFromGraphML(std::string filename, double graphprobabiledge);
 	/** Add an arbitrary edge to the network.
 		Returns 0 on success and 1 if the edge already exists in this graph. */
 	int addEdge( Edge* e );
@@ -157,7 +159,7 @@ private:
 
 	/** Helper function for estReliabilityMC, contains the recursion.
 		nc is the current node, and nf is the target. */
-	bool unfoldGraph( int nc, std::vector<Edge*> *connectingEdges, bool *visitedNodes );
+	bool unfoldGraph( int nc, std::vector<Edge*> *connectingEdges, std::vector<bool> *visitedNodes );
 
 
     static int biggestNodeId;	//!< Used for keeping track of the nodes (TODO, a vector would be better)
